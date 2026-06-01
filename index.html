@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flex Message Preview + JSON Export</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Segoe UI',Sarabun,sans-serif; background:#F1F5F9; color:#0F172A; font-size:14px; }
+
+.hero { background:linear-gradient(135deg,#0F172A,#1E3A5F); color:#fff; padding:28px 40px; display:flex; justify-content:space-between; align-items:center; }
+.hero h1 { font-size:20px; font-weight:700; }
+.hero p { color:#94A3B8; font-size:13px; margin-top:4px; }
+.hero .badge { background:#0EA5E9; color:#fff; font-size:11px; font-weight:600; padding:3px 10px; border-radius:999px; }
+
+.layout { display:grid; grid-template-columns:220px 1fr 380px; height:calc(100vh - 88px); }
+
+/* ── Sidebar ── */
+.sidebar { background:#fff; border-right:1px solid #E2E8F0; overflow-y:auto; }
+.sidebar-title { padding:16px; font-size:11px; font-weight:700; color:#94A3B8; letter-spacing:0.5px; text-transform:uppercase; border-bottom:1px solid #F1F5F9; }
+.nav-item { padding:14px 16px; cursor:pointer; border-bottom:1px solid #F8FAFC; display:flex; align-items:center; gap:10px; transition:background 0.15s; }
+.nav-item:hover { background:#F8FAFC; }
+.nav-item.active { background:#F0F9FF; border-left:3px solid #0EA5E9; }
+.nav-item .nav-icon { font-size:20px; flex-shrink:0; }
+.nav-item .nav-text { }
+.nav-item .nav-label { font-size:11px; font-weight:700; color:#94A3B8; letter-spacing:0.3px; }
+.nav-item .nav-name { font-size:13px; font-weight:600; color:#0F172A; margin-top:2px; }
+.nav-item.active .nav-name { color:#0284C7; }
+
+/* ── Preview ── */
+.preview-area { background:#E5E7EB; display:flex; align-items:flex-start; justify-content:center; padding:32px 24px; overflow-y:auto; }
+.phone-frame { background:#1c1c1e; border-radius:36px; padding:16px; width:360px; min-height:640px; box-shadow:0 20px 60px rgba(0,0,0,0.4); }
+.phone-screen { background:#F2F2F7; border-radius:24px; overflow:hidden; min-height:610px; }
+.chat-header { background:#fff; padding:12px 16px; border-bottom:1px solid #E5E7EB; display:flex; align-items:center; gap:10px; }
+.chat-header .avatar { width:34px; height:34px; background:linear-gradient(135deg,#0EA5E9,#0F172A); border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-size:14px; font-weight:700; }
+.chat-header .chat-name { font-size:13px; font-weight:700; }
+.chat-header .chat-sub { font-size:11px; color:#94A3B8; }
+.chat-body { padding:12px 10px; background:#E8E8ED; min-height:500px; }
+.chat-bubble-wrap { display:flex; justify-content:flex-start; margin-bottom:10px; }
+.flex-card { background:#fff; border-radius:16px; overflow:hidden; max-width:300px; box-shadow:0 2px 8px rgba(0,0,0,0.12); }
+.flex-card .fc-header { padding:14px 14px 12px; }
+.flex-card .fc-icon-row { display:flex; align-items:center; gap:8px; }
+.flex-card .fc-icon { width:36px; height:36px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
+.flex-card .fc-label { font-size:9px; font-weight:700; letter-spacing:0.5px; text-transform:uppercase; }
+.flex-card .fc-title { font-size:13px; font-weight:700; color:#fff; margin-top:2px; line-height:1.3; }
+.flex-card .fc-sub { font-size:11px; color:#94A3B8; }
+.flex-card .fc-body { padding:12px 14px; background:#fff; }
+.flex-card .why-box { background:#F8FAFC; border-radius:6px; padding:8px 10px; margin-bottom:8px; border:1px solid #E2E8F0; }
+.flex-card .why-title { font-size:10px; font-weight:700; color:#0F172A; }
+.flex-card .why-text { font-size:10px; color:#475569; margin-top:3px; line-height:1.5; }
+.flex-card .steps-title { font-size:10px; font-weight:700; color:#64748B; text-transform:uppercase; letter-spacing:0.3px; margin-bottom:5px; }
+.flex-card .step-row { display:flex; gap:6px; margin-bottom:4px; }
+.flex-card .step-num { font-size:10px; font-weight:700; flex-shrink:0; }
+.flex-card .step-text { font-size:10px; color:#374151; line-height:1.4; }
+.flex-card .example-box { background:#0F172A; border-radius:6px; padding:8px 10px; margin-top:8px; }
+.flex-card .ex-label { font-size:9px; font-weight:700; color:#94A3B8; letter-spacing:0.3px; margin-bottom:4px; }
+.flex-card .ex-text { font-size:10px; color:#E2E8F0; line-height:1.7; white-space:pre-wrap; font-family:monospace; }
+.flex-card .fc-footer { padding:8px 14px; display:flex; justify-content:space-between; align-items:center; }
+.flex-card .deadline { font-size:10px; font-weight:700; }
+.flex-card .send-time { font-size:9px; color:#94A3B8; }
+
+/* ── JSON Panel ── */
+.json-panel { background:#1E293B; overflow-y:auto; display:flex; flex-direction:column; }
+.json-toolbar { background:#0F172A; padding:14px 16px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #334155; flex-shrink:0; }
+.json-toolbar span { font-size:12px; color:#94A3B8; font-weight:600; }
+.copy-btn { background:#0EA5E9; color:#fff; border:none; padding:6px 16px; border-radius:6px; font-size:12px; font-weight:600; cursor:pointer; transition:background 0.15s; }
+.copy-btn:hover { background:#0284C7; }
+.copy-btn.copied { background:#22C55E; }
+.json-code { flex:1; padding:16px; font-family:'Cascadia Code',Consolas,monospace; font-size:11px; color:#E2E8F0; line-height:1.8; overflow-y:auto; white-space:pre; }
+.json-code .key { color:#93C5FD; }
+.json-code .str { color:#86EFAC; }
+.json-code .num { color:#FDE68A; }
+.json-code .bool { color:#F9A8D4; }
+
+.n8n-note { background:#0F172A; border-top:1px solid #334155; padding:14px 16px; flex-shrink:0; }
+.n8n-note p { font-size:11px; color:#94A3B8; line-height:1.6; }
+.n8n-note strong { color:#38BDF8; }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div>
+    <h1>🤖 Flex Message Preview</h1>
+    <p>เลือก card ทางซ้าย → ดู preview → copy JSON ไปใส่ n8n</p>
+  </div>
+  <span class="badge">6 Cards Ready</span>
+</div>
+
+<div class="layout">
+
+  <!-- ── SIDEBAR ── -->
+  <div class="sidebar">
+    <div class="sidebar-title">เลือก Card</div>
+    <div class="nav-item active" onclick="selectCard('daily')">
+      <div class="nav-icon">📊</div>
+      <div class="nav-text">
+        <div class="nav-label">Daily · ทุกวัน</div>
+        <div class="nav-name">Big Lot & Shortage</div>
+      </div>
+    </div>
+    <div class="nav-item" onclick="selectCard('week1')">
+      <div class="nav-icon">💰</div>
+      <div class="nav-text">
+        <div class="nav-label">Week 1 · ราคา</div>
+        <div class="nav-name">Class A + คู่แข่ง</div>
+      </div>
+    </div>
+    <div class="nav-item" onclick="selectCard('week2')">
+      <div class="nav-icon">🏭</div>
+      <div class="nav-text">
+        <div class="nav-label">Week 2 · คลัง</div>
+        <div class="nav-name">Display & Mock-up</div>
+      </div>
+    </div>
+    <div class="nav-item" onclick="selectCard('week3')">
+      <div class="nav-icon">📦</div>
+      <div class="nav-text">
+        <div class="nav-label">Week 3 · สต๊อก</div>
+        <div class="nav-name">Inventory & Online</div>
+      </div>
+    </div>
+    <div class="nav-item" onclick="selectCard('week4')">
+      <div class="nav-icon">📊</div>
+      <div class="nav-text">
+        <div class="nav-label">Week 4 · สรุป</div>
+        <div class="nav-name">แผน & New Item</div>
+      </div>
+    </div>
+    <div class="nav-item" onclick="selectCard('monthly_calendar')">
+      <div class="nav-icon">📅</div>
+      <div class="nav-text">
+        <div class="nav-label">ต้นเดือน</div>
+        <div class="nav-name">ปฏิทิน Routine</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PHONE PREVIEW ── -->
+  <div class="preview-area">
+    <div class="phone-frame">
+      <div class="phone-screen">
+        <div class="chat-header">
+          <div class="avatar">ม</div>
+          <div>
+            <div class="chat-name">ทีมจัดซื้อ — Report</div>
+            <div class="chat-sub">เมืองวัสดุ อุบลฯ</div>
+          </div>
+        </div>
+        <div class="chat-body">
+          <div class="chat-bubble-wrap">
+            <div class="flex-card" id="preview-card">
+              <!-- Rendered by JS -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── JSON PANEL ── -->
+  <div class="json-panel">
+    <div class="json-toolbar">
+      <span id="json-label">daily.json</span>
+      <button class="copy-btn" id="copy-btn" onclick="copyJSON()">Copy JSON</button>
+    </div>
+    <div class="json-code" id="json-output"></div>
+    <div class="n8n-note">
+      <p><strong>วิธีใช้ใน n8n:</strong> HTTP Request Node → Body → paste JSON นี้ใน <strong>messages[0]</strong> array<br>
+      หรือถ้าใช้ LINE node: <strong>Flex Message</strong> → paste ใน Contents field<br>
+      <strong>monthly_calendar:</strong> แทน <code style="color:#FDE68A">{{MONTH_YEAR}}</code> / <code style="color:#FDE68A">{{W1_DATES}}</code> ฯลฯ ด้วย n8n expression</p>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const CARDS = {
+  daily: {
+    headerBg: '#0F172A',
+    iconBg: '#FFF7ED',
+    icon: '📊',
+    labelColor: '#EA580C',
+    label: 'DAILY · ทุกวันจันทร์–ศุกร์',
+    title: 'เช็ค MVDesktop',
+    sub: 'แจ้ง Big Lot & Shortage',
+    whyText: 'จับสัญญาณรายวันก่อนใคร — Big Lot ที่ไม่ได้เตรียมสต๊อกทำให้ของขาด, Shortage ที่รู้ช้าทำให้เสียยอดขาย',
+    stepColor: '#EA580C',
+    steps: [
+      'เปิด MVDesktop → ดู order วันนี้ในหมวดของตัวเอง',
+      'Big Lot = order เดียว > 50,000฿ หรือ > 3× ปริมาณปกติ',
+      'Shortage = สต๊อกเหลือ < 7 วัน ตามอัตราขาย',
+      'ส่งรายงานในกลุ่มนี้ ถ้าไม่มีอะไร ส่ง ✅ ปกติ ก็พอ'
+    ],
+    example: '📅 15/01 | พี่นก | เครื่องมือช่าง\n🔴 BIG LOT: ดอกสว่าน X-Force 50 ชุด\n   → ลูกค้า: บ.รับเหมา ABC\n   → แผน: โทรยืนยันส่งได้ 17/01\n🟡 SHORTAGE: สกัดลม 4" เหลือ 3 วัน\n   → แผน: สั่งเพิ่ม 20 ชิ้น\n──────────\n📅 15/01 | แอน | ห้องน้ำ\n✅ ปกติ',
+    footerBg: '#FFF7ED',
+    deadlineColor: '#92400E',
+    deadline: '⏰  ส่งก่อน 09:30 น.',
+    sendTime: 'Bot แจ้ง 08:45 น.'
+  },
+  week1: {
+    headerBg: '#0F172A', iconBg: '#EFF6FF', icon: '💰',
+    labelColor: '#93C5FD', label: 'WEEK 1 · ราคา & ตลาด',
+    title: 'โครงสร้างราคา Class A',
+    sub: 'สำรวจคู่แข่ง + Sale In/Out',
+    whyText: 'ราคา Class A คือ "หน้าร้าน" ที่ลูกค้าเปรียบก่อนตัดสินใจ ถ้าแพงกว่าคู่แข่งโดยไม่รู้ตัว จะเสียยอดโดยไม่รู้สาเหตุ',
+    stepColor: '#2563EB',
+    steps: [
+      'วิธี A 📎 แนบไฟล์ต้นทุน/ราคาที่ใช้คำนวณอยู่แล้ว',
+      'วิธี B 🔍 รายงาน 5 item ที่สำรวจราคาคู่แข่งมา',
+      'Sale In เป้าเดือนนี้: อ้างอิงแบรนด์ และ/หรือ เป้าร้าน',
+      'Sale Out เป้าเดือนนี้: ยอดที่คาดว่าจะขายได้'
+    ],
+    example: '📋 W1-ราคา | พี่นาง | ไฟฟ้า\n📎 [แนบไฟล์ราคา LED Philips.xlsx]\n\nหรือ (แบบ 5 item)\nLED 9W  | เรา 129฿ | HomePro 139฿ | Global 125฿ ⚠️\n\n🎯 Sale In: 280,000฿ (เป้าแบรนด์)\n🎯 Sale Out: 320,000฿ (เป้าร้าน)\n⚠️ LED 9W แพงกว่า Global ขอปรับด้วย',
+    footerBg: '#EFF6FF', deadlineColor: '#1E40AF',
+    deadline: '⏰  ส่งภายในวันศุกร์ W1', sendTime: 'Bot แจ้ง จันทร์ 08:00 น.'
+  },
+  week2: {
+    headerBg: '#0F172A', iconBg: '#F0FDF4', icon: '🏭',
+    labelColor: '#86EFAC', label: 'WEEK 2 · คลัง & Display',
+    title: 'สำรวจคลัง + Display',
+    sub: 'on Shelf / ตัวโชว์ / Mock-up',
+    whyText: 'สินค้าที่ไม่ถูก display หรือ mock-up ดีพอขายยาก เพราะลูกค้าไม่เห็น ไม่จับต้อง ไม่ตัดสินใจซื้อ',
+    stepColor: '#16A34A',
+    steps: [
+      'คลัง: ของกองซ้อนถูกต้อง? มีเสียหาย/หมดอายุ?',
+      'Shelf: ครบไหม? Class A อยู่ตำแหน่งที่เห็นง่าย?',
+      'ตัวโชว์/Mock-up: ยังใช้งานได้? ต้องซ่อมหรือทำใหม่?',
+      'ถ่ายรูป 1–3 รูป ถ้าพบปัญหาหรือจัดใหม่สำเร็จ'
+    ],
+    example: '🏭 W2-คลัง | ป๊อกกี้ | พื้น/ผนัง/ฝ้า\n\n📦 คลัง: Cotto 60×60 กองสูงเกิน\n   → แจ้งคลังจัดใหม่แล้ว ✅\n🛍️ Shelf: ตัวอย่างใหม่ยังไม่ติด\n   → รอ supplier ส่ง 18/01\n🎨 Mock-up set B: ก๊อกหัก\n   → แจ้งช่างซ่อมแล้ว ETA 20/01\n📸 [รูป]',
+    footerBg: '#F0FDF4', deadlineColor: '#14532D',
+    deadline: '⏰  ส่งภายในวันพุธ W2', sendTime: 'Bot แจ้ง จันทร์ 08:00 น.'
+  },
+  week3: {
+    headerBg: '#0F172A', iconBg: '#FFFBEB', icon: '📦',
+    labelColor: '#FDE68A', label: 'WEEK 3 · สต๊อก & ออนไลน์',
+    title: 'Inventory + เร่งยอด',
+    sub: '+ Online Channel Report',
+    whyText: 'สต๊อกค้างกินเงินทุน ต้องเคลียร์ก่อนสิ้นเดือน ส่วน online ถ้าไม่ดูแล listing ล้าสมัย ราคาผิด ทำให้เสียยอดโดยไม่รู้ตัว',
+    stepColor: '#D97706',
+    steps: [
+      'Inventory: สินค้าค้าง > 60 วัน → เสนอแผนระบาย',
+      'เร่งยอด: ระบุสินค้าที่ต้องเร่ง + action plan',
+      'Online — ยอด / ราคา+โปร / ปัญหาที่พบ',
+      'Online — อยากเพิ่ม listing ไหน? ลบ listing ไหน?'
+    ],
+    example: '📦 W3-สต๊อก | แอน | ห้องน้ำ\n\n🗃️ ค้าง >60 วัน:\n   ชักโครก A-Brand: 8 ชิ้น\n   → แผน: ลด 15% + post FB\n🚀 เร่งยอด: ฝักบัว Rain ยอดน้อย\n🌐 Online: 3 ออเดอร์ / 2,400฿\n   ปัญหา: รูปแสดงผิดรุ่น → แก้แล้ว ✅\n   เพิ่ม: ฝักบัว Rain 3 รุ่น\n   ลบ: ก๊อก discontinued 2 รายการ',
+    footerBg: '#FFFBEB', deadlineColor: '#713F12',
+    deadline: '⏰  ส่งภายในวันพฤหัส W3', sendTime: 'Bot แจ้ง จันทร์ 08:00 น.'
+  },
+  week4: {
+    headerBg: '#0F172A', iconBg: '#FDF4FF', icon: '📊',
+    labelColor: '#D8B4FE', label: 'WEEK 4 · สรุป & แผน',
+    title: 'สรุปเดือน + แผนหน้า',
+    sub: '+ New Item Proposal',
+    whyText: 'การสรุปตนเองสอนให้คิดเป็นเหตุเป็นผล รู้ว่า "ทำไม" เดือนนี้ดีหรือแย่ ส่วน New Item ทำให้จัดซื้อเป็นคนขับ range สินค้าของร้าน',
+    stepColor: '#9333EA',
+    steps: [
+      'ดูยอดขายจาก MVDesktop เทียบกับเป้า',
+      'เขียน 1 สิ่งที่ดี + 1 สิ่งที่ต้องแก้ (สั้นๆ ได้)',
+      'แผน 3 action: ทำอะไร / เมื่อไร / วัดผลยังไง',
+      'New Item: ชื่อ / supplier / ราคา / เหตุผล (ถ้ามี)'
+    ],
+    example: '📊 W4-สรุป | พี่อ้อม | สีและอุปกรณ์\n\n💰 380,000฿ (เป้า 420,000฿ = 90.5%)\n✅ ดี: TOA ขายดี ลูกค้า project เพิ่ม\n❌ แก้: สีรองพื้นค้างสต๊อกมาก\n\n📅 แผนหน้า:\n1. bundle สี+รองพื้น → 5/02\n2. ตัวอย่างสีโทนใหม่ → 8/02\n3. ติดตาม project 3 ราย → 7/02\n\n🆕 สีทาพื้นไม้ Beger 350฿/ลิตร\n   → ลูกค้าถามบ่อย คู่แข่งมีแล้ว',
+    footerBg: '#FDF4FF', deadlineColor: '#581C87',
+    deadline: '⏰  ส่งก่อนประชุม 1 วัน', sendTime: 'Bot แจ้ง จันทร์ W4 08:00 น.'
+  },
+  monthly_calendar: {
+    headerBg: '#0F172A', iconBg: '#1E3A5F', icon: '📅',
+    labelColor: '#38BDF8', label: 'ส่งต้นเดือน · 09:00 น.',
+    title: 'ปฏิทิน Routine จัดซื้อ',
+    sub: '{{MONTH_YEAR}}',
+    whyText: 'ส่งให้ทีมเห็นภาพล่วงหน้าทั้งเดือน ทุกคนรู้ deadline ของตัวเองตั้งแต่ต้น ลด "ลืม" และ "ไม่รู้"',
+    stepColor: '#0EA5E9',
+    steps: [
+      '📊 Daily: เช็ค MVDesktop ก่อน 09:30 น. ทุกวัน จ–ศ',
+      '💰 Week 1 {{W1_DATES}}: ราคา + คู่แข่ง | Deadline: {{W1_DEADLINE}}',
+      '🏭 Week 2 {{W2_DATES}}: คลัง + Display | Deadline: {{W2_DEADLINE}}',
+      '📦 Week 3 {{W3_DATES}}: Inventory + Online | Deadline: {{W3_DEADLINE}}',
+      '📊 Week 4 {{W4_DATES}}: สรุป + แผน + New Item | Deadline: {{W4_DEADLINE}}'
+    ],
+    example: '📅 ปฏิทิน กุมภาพันธ์ 2568\n\n💰 W1: 3–7 ก.พ. → ส่งศุกร์ 7 ก.พ.\n🏭 W2: 10–14 ก.พ. → ส่งพุธ 12 ก.พ.\n📦 W3: 17–21 ก.พ. → ส่งพฤหัส 20 ก.พ.\n📊 W4: 24–28 ก.พ. → ส่งพฤหัส 27 ก.พ.\n\n💪 ขอบคุณทุกคนมากๆ เลยนะคะ!',
+    footerBg: '#1E3A5F', deadlineColor: '#BAE6FD',
+    deadline: '📅  ส่งต้นเดือน 09:00 น.', sendTime: 'Bot แจ้ง วันที่ 1'
+  }
+};
+
+let currentKey = 'daily';
+
+function renderCard(key) {
+  const c = CARDS[key];
+  const el = document.getElementById('preview-card');
+  el.innerHTML = `
+    <div class="fc-header" style="background:${c.headerBg}">
+      <div class="fc-icon-row">
+        <div class="fc-icon" style="background:${c.iconBg}">${c.icon}</div>
+        <div>
+          <div class="fc-label" style="color:${c.labelColor}">${c.label}</div>
+          <div class="fc-title">${c.title}</div>
+          <div class="fc-sub">${c.sub}</div>
+        </div>
+      </div>
+    </div>
+    <div class="fc-body">
+      <div class="why-box">
+        <div class="why-title">🎯  ทำไมสำคัญ</div>
+        <div class="why-text">${c.whyText}</div>
+      </div>
+      <div class="steps-title">📋  ทำอะไรบ้าง</div>
+      ${c.steps.map((s,i) => `
+        <div class="step-row">
+          <span class="step-num" style="color:${c.stepColor}">${'①②③④⑤'[i]}</span>
+          <span class="step-text">${s}</span>
+        </div>
+      `).join('')}
+      <div class="example-box">
+        <div class="ex-label">💬  ตัวอย่างข้อความ</div>
+        <div class="ex-text">${c.example}</div>
+      </div>
+    </div>
+    <div class="fc-footer" style="background:${c.footerBg}">
+      <span class="deadline" style="color:${c.deadlineColor}">${c.deadline}</span>
+      <span class="send-time">${c.sendTime}</span>
+    </div>
+  `;
+}
+
+function syntaxHighlight(json) {
+  return json
+    .replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function(match) {
+      let cls = 'num';
+      if (/^"/.test(match)) {
+        if (/:$/.test(match)) cls = 'key';
+        else cls = 'str';
+      } else if (/true|false/.test(match)) cls = 'bool';
+      return `<span class="${cls}">${match}</span>`;
+    });
+}
+
+function renderJSON(key) {
+  fetch('flex_messages.json')
+    .then(r => r.json())
+    .then(data => {
+      const json = JSON.stringify(data[key], null, 2);
+      document.getElementById('json-output').innerHTML = syntaxHighlight(json);
+      document.getElementById('json-label').textContent = key + '.json';
+      window._currentJSON = json;
+    })
+    .catch(() => {
+      // Fallback: show placeholder
+      document.getElementById('json-output').textContent = '// เปิดไฟล์นี้ผ่าน web server\n// หรือ copy JSON จากไฟล์ flex_messages.json ได้โดยตรง\n// key: "' + key + '"';
+      window._currentJSON = '';
+    });
+}
+
+function selectCard(key) {
+  currentKey = key;
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  renderCard(key);
+  renderJSON(key);
+  document.getElementById('copy-btn').textContent = 'Copy JSON';
+  document.getElementById('copy-btn').classList.remove('copied');
+}
+
+function copyJSON() {
+  const btn = document.getElementById('copy-btn');
+  const text = window._currentJSON || document.getElementById('json-output').innerText;
+  if (!text || text.startsWith('//')) {
+    // Fallback: try to copy the displayed text
+    navigator.clipboard.writeText(text).catch(() => {});
+    btn.textContent = 'ดู flex_messages.json';
+    return;
+  }
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = '✅ Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy JSON'; btn.classList.remove('copied'); }, 2500);
+  });
+}
+
+// Init
+renderCard('daily');
+renderJSON('daily');
+</script>
+</body>
+</html>
